@@ -7,6 +7,8 @@ use Doctrine\ORM\ORMInvalidArgumentException;
 use Gedmo\Tool\Wrapper\AbstractWrapper;
 use Gedmo\Mapping\MappedEventSubscriber;
 use Gedmo\Translatable\Mapping\Event\TranslatableAdapter;
+use Gedmo\Translatable\Entity\MappedSuperclass\AbstractPersonalTranslation;
+use Gedmo\Translatable\Entity\MappedSuperclass\AbstractTranslation;
 
 /**
  * The translation listener handles the generation and
@@ -539,7 +541,7 @@ class TranslatableListener extends MappedEventSubscriber
                     && get_class($trans) === $translationClass
                     && $trans->getLocale() === $this->defaultLocale
                     && $trans->getField() === $field
-                    && $trans->getObject() === $object) {
+                    && $this->belongsToObject($trans, $object)) {
                     $this->setTranslationInDefaultLocale($oid, $field, $trans);
                     break;
                 }
@@ -722,4 +724,27 @@ class TranslatableListener extends MappedEventSubscriber
     {
         return array_key_exists($oid, $this->translationInDefaultLocale);
     }
+
+    /**
+     * Checks if the translation entity belongs to the object in question
+     *
+     * @param   mixed   $trans
+     * @param   mixed   $object
+     * @return  boolean
+     * @throws  \Gedmo\Exception\InvalidArgumentException
+     */
+    private function belongsToObject($trans, $object)
+    {
+        if ($trans instanceof AbstractPersonalTranslation) {
+            return $trans->getObject() === $object;
+        } elseif ($trans instanceof AbstractTranslation) {
+            return ($trans->getForeignKey() === $object->getId()
+                && ($trans->getObjectClass() === get_class($object)));
+        } else {
+            throw new \Gedmo\Exception\InvalidArgumentException(
+                'Translation class must be instance of AbstractPersonalTranslation or AbstractTranslation'
+            );
+        }
+    }
 }
+
